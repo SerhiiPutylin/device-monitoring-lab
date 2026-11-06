@@ -29,6 +29,9 @@ replay_pid*
 # Local IntelliJ IDEA settings
 .idea/
 
+# Local task worktrees
+/.worktrees/
+
 # Local environment files; keep sanitized examples versioned
 .env
 .env.*
