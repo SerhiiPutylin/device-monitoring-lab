@@ -22,3 +22,14 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# macOS metadata
+.DS_Store
+
+# Local IntelliJ IDEA settings
+.idea/
+
+# Local environment files; keep sanitized examples versioned
+.env
+.env.*
+!.env.example
