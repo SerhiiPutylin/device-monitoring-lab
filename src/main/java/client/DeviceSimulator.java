@@ -20,6 +20,10 @@ public class DeviceSimulator {
         out.write(line);
         out.flush();
         sleep();
+
+        if (Thread.currentThread().isInterrupted()) {
+          break;
+        }
       }
     }
   }
