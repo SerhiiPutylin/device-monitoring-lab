@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 
 public class TcpServer {
 
-  private static Logger LOGGER = Logger.getLogger(TcpServer.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(TcpServer.class.getName());
 
   public static void main(String[] args) throws IOException {
     try (ServerSocket serverSocket = new ServerSocket(PORT, 1, InetAddress.getByName(HOST))) {
@@ -33,20 +33,28 @@ public class TcpServer {
         while ((c = bufferedReader.read()) != -1) {
           char character = (char) c;
           stringBuilder.append(character);
-          if (character == '\n') {
-            System.out.print(stringBuilder);
-            stringBuilder.setLength(0);
-          }
-          if (character != '\n' && stringBuilder.length() >= MAX_MESSAGE_LENGTH) {
-            throw new MaxLengthExceededException(
-                "message exceeded max length of " + MAX_MESSAGE_LENGTH + " characters");
-          }
+          printFullLine(character, stringBuilder);
+          verifyMaxLength(character, stringBuilder);
         }
       }
     } catch (MaxLengthExceededException maxLengthExceededException) {
       LOGGER.warning(maxLengthExceededException.getMessage());
     } catch (SocketTimeoutException socketTimeoutException) {
       LOGGER.warning("Socket timeout exception: " + socketTimeoutException.getMessage());
+    }
+  }
+
+  private static void printFullLine(char character, StringBuilder stringBuilder) {
+    if (character == '\n') {
+      System.out.print(stringBuilder);
+      stringBuilder.setLength(0);
+    }
+  }
+
+  private static void verifyMaxLength(char character, StringBuilder stringBuilder) {
+    if (character != '\n' && stringBuilder.length() > MAX_MESSAGE_LENGTH) {
+      throw new MaxLengthExceededException(
+          "message exceeded max length of " + MAX_MESSAGE_LENGTH + " characters");
     }
   }
 }
