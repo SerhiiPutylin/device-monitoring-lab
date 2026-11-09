@@ -2,6 +2,7 @@ package server;
 
 import static util.Constants.*;
 
+import exception.IncompleteLineException;
 import exception.MaxLengthExceededException;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,9 +37,12 @@ public class TcpServer {
           printFullLine(character, stringBuilder);
           verifyMaxLength(character, stringBuilder);
         }
+        if (!stringBuilder.isEmpty()) {
+          throw new IncompleteLineException("Last message is incomplete: " + stringBuilder);
+        }
       }
-    } catch (MaxLengthExceededException maxLengthExceededException) {
-      LOGGER.warning(maxLengthExceededException.getMessage());
+    } catch (MaxLengthExceededException | IncompleteLineException e) {
+      LOGGER.warning(e.getMessage());
     } catch (SocketTimeoutException socketTimeoutException) {
       LOGGER.warning("Socket timeout exception: " + socketTimeoutException.getMessage());
     }
