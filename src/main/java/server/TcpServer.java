@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public class TcpServer {
@@ -24,23 +25,8 @@ public class TcpServer {
   }
 
   private static void readFromSocket(ServerSocket serverSocket) throws IOException {
-    try (Socket socket = serverSocket.accept()) {
-      socket.setSoTimeout(5000);
-      try (BufferedReader bufferedReader =
-          new BufferedReader(new InputStreamReader(socket.getInputStream(), CHARSET))) {
-
-        StringBuilder stringBuilder = new StringBuilder();
-        int c;
-        while ((c = bufferedReader.read()) != -1) {
-          char character = (char) c;
-          stringBuilder.append(character);
-          printFullLine(character, stringBuilder);
-          verifyMaxLength(character, stringBuilder);
-        }
-        if (!stringBuilder.isEmpty()) {
-          throw new IncompleteLineException("Last message is incomplete: " + stringBuilder);
-        }
-      }
+    try {
+      handleConnection(serverSocket.accept(), 5000, System.out::println);
     } catch (MaxLengthExceededException | IncompleteLineException e) {
       LOGGER.warning(e.getMessage());
     } catch (SocketTimeoutException socketTimeoutException) {
@@ -48,17 +34,19 @@ public class TcpServer {
     }
   }
 
-  private static void printFullLine(char character, StringBuilder stringBuilder) {
-    if (character == '\n') {
-      System.out.print(stringBuilder);
-      stringBuilder.setLength(0);
-    }
-  }
-
-  private static void verifyMaxLength(char character, StringBuilder stringBuilder) {
-    if (character != '\n' && stringBuilder.length() > MAX_MESSAGE_LENGTH) {
-      throw new MaxLengthExceededException(
-          "message exceeded max length of " + MAX_MESSAGE_LENGTH + " characters");
+  // Owns and closes the accepted socket, including when reading or processing fails.
+  static void handleConnection(
+      Socket socket, int readTimeoutMillis, Consumer<String> onMessage) throws IOException {
+    try (socket) {
+      socket.setSoTimeout(readTimeoutMillis);
+      try (BufferedReader reader =
+          new BufferedReader(new InputStreamReader(socket.getInputStream(), CHARSET))) {
+        NewlineMessageReader messages = new NewlineMessageReader(reader, MAX_MESSAGE_LENGTH);
+        String message;
+        while ((message = messages.readMessage()) != null) {
+          onMessage.accept(message);
+        }
+      }
     }
   }
 }
