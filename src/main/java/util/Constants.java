@@ -8,5 +8,7 @@ public class Constants {
   public static final int PORT = 9000;
   public static final Charset CHARSET = StandardCharsets.UTF_8;
 
+  public static final int MAX_MESSAGE_LENGTH = 256;
+
   private Constants() {}
 }
