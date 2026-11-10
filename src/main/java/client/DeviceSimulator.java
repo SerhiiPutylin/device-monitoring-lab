@@ -40,7 +40,8 @@ public class DeviceSimulator {
 
   private static Socket tryToConnect() throws IOException {
     Socket socket = null;
-    for (int i = 0; i < CONNECT_RETRY_ATTEMPTS; i++) {
+    int attempt = 0;
+    while (attempt < CONNECT_RETRY_ATTEMPTS) {
       try {
         socket = new Socket();
         socket.connect(new InetSocketAddress(InetAddress.getByName(HOST), PORT), 1000);
@@ -48,14 +49,15 @@ public class DeviceSimulator {
         return socket;
       } catch (ConnectException | SocketTimeoutException e) {
         socket.close();
+        attempt++;
         LOGGER.warning(
-            "Attempt #%d to connect to ".formatted(i)
+            "Attempt #%d to connect to ".formatted(attempt)
                 + HOST
                 + ":"
                 + PORT
                 + " failed: "
-                + ce.getMessage());
-        if (hasRetryAttempts(i)) {
+                + e.getMessage());
+        if (hasRetryAttempts(attempt)) {
           sleep();
           if (Thread.currentThread().isInterrupted()) {
             break;
@@ -82,7 +84,7 @@ public class DeviceSimulator {
   }
 
   private static boolean hasRetryAttempts(int attempt) {
-    return attempt < CONNECT_RETRY_ATTEMPTS - 1;
+    return attempt < CONNECT_RETRY_ATTEMPTS;
   }
 
   private static void sleep() {
