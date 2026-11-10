@@ -7,10 +7,7 @@ import exception.ThreadInterruptedException;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.net.*;
 import java.util.logging.Logger;
 
 public class DeviceSimulator {
@@ -49,7 +46,7 @@ public class DeviceSimulator {
         socket.connect(new InetSocketAddress(InetAddress.getByName(HOST), PORT), 1000);
         LOGGER.info("Successfully connected to " + HOST + ":" + PORT);
         return socket;
-      } catch (ConnectException ce) {
+      } catch (ConnectException | SocketTimeoutException e) {
         socket.close();
         LOGGER.warning(
             "Attempt #%d to connect to ".formatted(i)
