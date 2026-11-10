@@ -23,6 +23,8 @@ Task 01.1 — TCP Client & Server: реалізовано мінімальний
 networking frameworks.
 
 - `client.DeviceSimulator` надсилає 10 повідомлень із секундними паузами.
+  Початкове підключення має connect timeout `1000 ms` і максимум три спроби,
+  із секундними паузами лише між невдалими спробами.
 - `server.TcpServer` слухає `127.0.0.1:9000`, приймає одне з'єднання і виводить
   кожне отримане повідомлення в консоль.
 - Обидві сторони явно використовують UTF-8; delimiter повідомлення — `\n`.
@@ -35,8 +37,10 @@ networking frameworks.
 Task 01.1 пройшов статичне code review та локальні ручні перевірки автора.
 У Task 01.2 додано read timeout, ліміт довжини повідомлення та відхилення
 незавершеного повідомлення при EOF. Автор підтвердив ручні boundary checks.
+У Task 01.3 додано bounded retries початкового connection для `ConnectException`
+і `SocketTimeoutException`; interrupt під час паузи припиняє подальші спроби.
 Автоматизовані unit та loopback integration tests пройшли на JDK 21:
-20 test cases, без failures, errors або skipped tests. Heartbeat і визначення
+32 test cases, без failures, errors або skipped tests. Heartbeat і визначення
 offline-стану залишаються наступними етапами навчального сценарію.
 
 ## Підготовка до запуску
@@ -103,8 +107,12 @@ device_01,0,23.5
 - Максимальна довжина повідомлення — 256 Java `char` (UTF-16 code units),
   без `\n`. Це не ліміт UTF-8 bytes. Перевищення закриває сесію.
 - Непорожній залишок повідомлення при EOF відхиляється з діагностикою.
-  Timeout також завершує сесію; reconnect відсутній.
-- Reconnect, heartbeat та визначення offline-стану ще не реалізовані.
+  Read timeout також завершує сесію.
+- Client повторює лише початкове підключення, максимум три рази загалом.
+  `Connection refused` може виникнути раніше за connect timeout.
+  Помилка надсилання telemetry завершує роботу без нового connection.
+- Відновлення вже встановленої сесії, heartbeat та визначення offline-стану
+  ще не реалізовані.
 
 Роботу з кількома connections, concurrency та загальним message deadline
 заплановано пізніше.
@@ -118,10 +126,10 @@ device_01,0,23.5
 mvn test
 ```
 
-Лише unit tests для framing:
+Лише unit tests для framing та client retries:
 
 ```sh
-mvn -Dtest=NewlineMessageReaderTest test
+mvn -Dtest=NewlineMessageReaderTest,DeviceSimulatorTest test
 ```
 
 `NewlineMessageReaderTest` перевіряє повідомлення та EOF, межу `256/257`,
@@ -134,9 +142,23 @@ Oversized input перевіряється reader, який не дозволя�
 мовчазне connection та закриття accepted socket. Кілька writes не гарантують
 окремих TCP reads; assertions перевіряють результат framing.
 
+`DeviceSimulatorTest` контролює створення sockets і паузи без зовнішньої мережі.
+Покрито успіх на першій, другій і третій спробах, refusal та connect timeout,
+вичерпання retry budget без зайвої паузи, закриття failed sockets до паузи,
+збереження interrupt flag, нумерацію спроб та відсутність reconnect після
+помилки telemetry. Connect timeout моделюється контрольованим socket,
+а не підключенням до випадкової зовнішньої адреси.
+
+`DeviceSimulatorIntegrationTest` перевіряє справжній client connection через
+loopback: 10 telemetry messages з правильними sequence numbers та EOF після
+закриття client. Пауза підмінена, щоб тест не чекав 10 секунд.
+
 Тести не потребують окремого запуску server або client і не використовують
 порт `9000`. Для futures, socket operations і завершення worker задано
 timeouts; `Thread.sleep()` для синхронізації не використовується.
+Interrupt-сценарії ізольовані в окремих worker threads, щоб не змінювати
+interrupt status JUnit thread. Повний suite також перевірено offline
+(`mvn --offline test`) з уже завантаженими залежностями.
 Maven може завантажувати test dependencies та build plugins під час першого
 запуску. Результати зберігаються в `target/surefire-reports/`.
 

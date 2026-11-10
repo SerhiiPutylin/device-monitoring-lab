@@ -8,6 +8,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.*;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public class DeviceSimulator {
@@ -15,8 +16,16 @@ public class DeviceSimulator {
   public static final int CONNECT_RETRY_ATTEMPTS = 3;
 
   public static void main(String[] args) throws IOException {
+    run(
+        new InetSocketAddress(InetAddress.getByName(HOST), PORT),
+        Socket::new,
+        DeviceSimulator::sleep);
+  }
 
-    try (Socket socket = tryToConnect()) {
+  // Production uses real sockets and one-second pauses; tests supply controlled collaborators.
+  static void run(InetSocketAddress address, Supplier<Socket> sockets, Runnable pause)
+      throws IOException {
+    try (Socket socket = tryToConnect(address, sockets, pause)) {
 
       try (BufferedWriter out =
           new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), CHARSET))) {
@@ -26,7 +35,7 @@ public class DeviceSimulator {
           String line = "device_01," + i + "," + value + "\n";
           out.write(line);
           out.flush();
-          sleep();
+          pause.run();
 
           if (Thread.currentThread().isInterrupted()) {
             break;
@@ -38,27 +47,24 @@ public class DeviceSimulator {
     }
   }
 
-  private static Socket tryToConnect() throws IOException {
-    Socket socket = null;
+  static Socket tryToConnect(InetSocketAddress address, Supplier<Socket> sockets, Runnable pause)
+      throws IOException {
+    String destination = address.getHostString() + ":" + address.getPort();
     int attempt = 0;
     while (attempt < CONNECT_RETRY_ATTEMPTS) {
       try {
-        socket = new Socket();
-        socket.connect(new InetSocketAddress(InetAddress.getByName(HOST), PORT), 1000);
-        LOGGER.info("Successfully connected to " + HOST + ":" + PORT);
+        Socket socket = connectOnce(address, sockets);
+        LOGGER.info("Successfully connected to " + destination);
         return socket;
       } catch (ConnectException | SocketTimeoutException e) {
-        socket.close();
         attempt++;
         LOGGER.warning(
             "Attempt #%d to connect to ".formatted(attempt)
-                + HOST
-                + ":"
-                + PORT
+                + destination
                 + " failed: "
                 + e.getMessage());
         if (hasRetryAttempts(attempt)) {
-          sleep();
+          pause.run();
           if (Thread.currentThread().isInterrupted()) {
             break;
           }
@@ -69,25 +75,37 @@ public class DeviceSimulator {
     if (Thread.currentThread().isInterrupted()) {
       throw new ThreadInterruptedException(
           "Failed to connect to "
-              + HOST
-              + ":"
-              + PORT
+              + destination
               + " after %d attempts due to thread interrupted".formatted(attempt));
     }
 
     throw new ConnectionFailedException(
         "Failed to connect to "
-            + HOST
-            + ":"
-            + PORT
+            + destination
             + " after %d attempts.".formatted(CONNECT_RETRY_ATTEMPTS));
+  }
+
+  private static Socket connectOnce(InetSocketAddress address, Supplier<Socket> sockets)
+      throws IOException {
+    Socket socket = sockets.get();
+    try {
+      socket.connect(address, 1000);
+      return socket;
+    } catch (IOException | RuntimeException failure) {
+      try {
+        socket.close();
+      } catch (IOException closeFailure) {
+        failure.addSuppressed(closeFailure);
+      }
+      throw failure;
+    }
   }
 
   private static boolean hasRetryAttempts(int attempt) {
     return attempt < CONNECT_RETRY_ATTEMPTS;
   }
 
-  private static void sleep() {
+  static void sleep() {
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
