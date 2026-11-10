@@ -3,6 +3,7 @@ package client;
 import static util.Constants.*;
 
 import exception.ConnectionFailedException;
+import exception.ThreadInterruptedException;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -64,6 +65,15 @@ public class DeviceSimulator {
           }
         }
       }
+    }
+
+    if (Thread.currentThread().isInterrupted()) {
+      throw new ThreadInterruptedException(
+          "Failed to connect to "
+              + HOST
+              + ":"
+              + PORT
+              + " after %d attempts due to thread interrupted".formatted(attempt));
     }
 
     throw new ConnectionFailedException(
