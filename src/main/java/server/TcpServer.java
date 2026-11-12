@@ -20,7 +20,9 @@ public class TcpServer {
 
   public static void main(String[] args) throws IOException {
     try (ServerSocket serverSocket = new ServerSocket(PORT, 1, InetAddress.getByName(HOST))) {
-      readFromSocket(serverSocket);
+      while (true) {
+        readFromSocket(serverSocket);
+      }
     }
   }
 
