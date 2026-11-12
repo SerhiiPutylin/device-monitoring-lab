@@ -25,8 +25,8 @@ networking frameworks.
 - `client.DeviceSimulator` надсилає 10 повідомлень із секундними паузами.
   Початкове підключення має connect timeout `1000 ms` і максимум три спроби,
   із секундними паузами лише між невдалими спробами.
-- `server.TcpServer` слухає `127.0.0.1:9000`, приймає одне з'єднання і виводить
-  кожне отримане повідомлення в консоль.
+- `server.TcpServer` слухає `127.0.0.1:9000`, обслуговує з'єднання послідовно
+  і виводить кожне отримане повідомлення в консоль.
 - Обидві сторони явно використовують UTF-8; delimiter повідомлення — `\n`.
 - Client виконує `flush()` після кожного повідомлення. Server збирає повідомлення
   до `\n` через `NewlineMessageReader` над buffered UTF-8 reader, тому framing
@@ -39,8 +39,10 @@ Task 01.1 пройшов статичне code review та локальні ру
 незавершеного повідомлення при EOF. Автор підтвердив ручні boundary checks.
 У Task 01.3 додано bounded retries початкового connection для `ConnectException`
 і `SocketTimeoutException`; interrupt під час паузи припиняє подальші спроби.
+У Task 01.4 listener продовжує приймати клієнтів після EOF, read timeout або
+protocol error попередньої сесії.
 Автоматизовані unit та loopback integration tests пройшли на JDK 21:
-32 test cases, без failures, errors або skipped tests. Heartbeat і визначення
+36 test cases, без failures, errors або skipped tests. Heartbeat і визначення
 offline-стану залишаються наступними етапами навчального сценарію.
 
 ## Підготовка до запуску
@@ -76,8 +78,9 @@ java -cp target/classes client.DeviceSimulator
 
 Очікуваний результат: у консолі server з'являться 10 окремих рядків із
 sequence numbers від `0` до `9`. Після останнього повідомлення client ще
-робить секундну паузу, закриває connection, а server отримує EOF і завершується.
-Для повторної сесії спочатку знову запусти server, потім client.
+робить секундну паузу й закриває connection. Server отримує EOF і чекає
+наступного клієнта. Для повторної сесії знову запусти лише client.
+Щоб зупинити server, натисни Ctrl+C у терміналі або Stop в IntelliJ IDEA.
 
 В IntelliJ IDEA можна запускати `main()` класів `server.TcpServer` і
 `client.DeviceSimulator` у такому самому порядку, використовуючи Project SDK 21.
@@ -100,7 +103,7 @@ device_01,0,23.5
 
 ## Відомі обмеження
 
-- Blocking I/O та одна клієнтська сесія; accept loop і concurrency відсутні.
+- Blocking I/O; accept loop обслуговує одну клієнтську сесію за раз.
 - Accepted socket має read timeout `5000 ms`. Це обмеження blocking read,
   а не загальний deadline отримання повідомлення. Очікування в `accept()`
   не має timeout.
@@ -114,7 +117,7 @@ device_01,0,23.5
 - Відновлення вже встановленої сесії, heartbeat та визначення offline-стану
   ще не реалізовані.
 
-Роботу з кількома connections, concurrency та загальним message deadline
+Одночасне обслуговування кількох сесій та загальний message deadline
 заплановано пізніше.
 
 ## Автоматизовані тести
@@ -141,6 +144,10 @@ Oversized input перевіряється reader, який не дозволя�
 в одному write, UTF-8 через кілька writes, межу довжини, partial EOF,
 мовчазне connection та закриття accepted socket. Кілька writes не гарантують
 окремих TCP reads; assertions перевіряють результат framing.
+
+`SequentialSessionsIntegrationTest` перевіряє, що той самий listener приймає
+другого клієнта й обробляє його повідомлення після EOF, read timeout,
+завеликого або незавершеного повідомлення першого клієнта.
 
 `DeviceSimulatorTest` контролює створення sockets і паузи без зовнішньої мережі.
 Покрито успіх на першій, другій і третій спробах, refusal та connect timeout,

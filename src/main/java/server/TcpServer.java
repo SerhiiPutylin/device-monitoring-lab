@@ -20,19 +20,22 @@ public class TcpServer {
 
   public static void main(String[] args) throws IOException {
     try (ServerSocket serverSocket = new ServerSocket(PORT, 1, InetAddress.getByName(HOST))) {
-      while (true) {
-        readFromSocket(serverSocket);
-      }
+      serve(serverSocket, 5000, System.out::println);
     }
   }
 
-  private static void readFromSocket(ServerSocket serverSocket) throws IOException {
-    try {
-      handleConnection(serverSocket.accept(), 5000, System.out::println);
-    } catch (MaxLengthExceededException | IncompleteLineException e) {
-      LOGGER.warning(e.getMessage());
-    } catch (SocketTimeoutException socketTimeoutException) {
-      LOGGER.warning("Socket timeout exception: " + socketTimeoutException.getMessage());
+  // The caller owns the listener; each accepted socket belongs to handleConnection.
+  static void serve(ServerSocket listener, int readTimeoutMillis, Consumer<String> onMessage)
+      throws IOException {
+    while (true) {
+      Socket socket = listener.accept();
+      try {
+        handleConnection(socket, readTimeoutMillis, onMessage);
+      } catch (MaxLengthExceededException | IncompleteLineException e) {
+        LOGGER.warning(e.getMessage());
+      } catch (SocketTimeoutException e) {
+        LOGGER.warning("Socket timeout exception: " + e.getMessage());
+      }
     }
   }
 
