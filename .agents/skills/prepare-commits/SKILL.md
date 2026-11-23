@@ -1,6 +1,6 @@
 ---
 name: prepare-commits
-description: Prepare purpose-focused commits in task worktrees, using task identifiers when available. Use after completing project changes or when the user requests commits. Stage task changes without separate approval and commit only after approval of the exact messages.
+description: Prepare purpose-focused commits in task worktrees, using task identifiers when available. Use after completing project changes or when the user requests commits. Stage task changes without separate approval and use one execution approval for each exact commit command.
 ---
 
 # Prepare Commits
@@ -20,7 +20,7 @@ writes, history rewriting, or execution outside the repository's permissions.
 - Never commit on `main`, `master`, detached HEAD, or another task's branch.
   The only bootstrap exception is a final commit introducing this workflow,
   explicitly approved by the user as a one-time protected-branch exception.
-  Approval of a message alone does not grant that exception.
+  Commit execution approval alone does not grant that exception.
 - If task changes already exist in another worktree, preserve them and agree on
   a safe transfer rather than automatically stashing, resetting, or discarding them.
 
@@ -69,18 +69,22 @@ Hypothetical example, using an identifier that must not be reused without contex
 #42 Prevent local machine settings from entering version control
 ```
 
-## Obtain message approval
+## Request commit execution approval
 
 - Present the ordered commit plan: exact message for each commit, included files
   or hunks and purpose for context, plus validation results or limitations.
-- Ask only for approval of the exact message or an explicitly listed batch of
-  messages. Do not ask for separate staging or file-list approval.
-- Stage task-related paths or hunks without separate confirmation. Do not create
-  commits before message approval; approval to implement changes is not message
-  approval. If a message changes, request approval of the revised message.
-- Message approval applies to the described task and does not authorize unrelated
-  content, material task-scope expansion, history rewriting, or a protected-branch
-  exception. Resolve unexpected content or scope changes before committing.
+- Show this context without asking the user to approve the message separately.
+  Stage task-related paths or hunks without separate confirmation.
+- Request a single execution approval through the tool's command approval prompt
+  for the exact `git commit` command, including the message. This is the commit
+  confirmation; do not add an earlier or later chat confirmation. Do not request
+  a reusable command-prefix allow rule for `git commit`.
+- Do not create a commit before its execution approval. If its message or task
+  content materially changes, request a new execution approval. Approval to
+  implement changes does not itself authorize committing.
+- Execution approval applies to the described task and does not authorize
+  unrelated content, history rewriting, or a protected-branch exception. Resolve
+  unexpected content or scope changes before requesting execution.
 
 ## Create and verify approved commits
 

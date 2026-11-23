@@ -89,7 +89,9 @@ Distinguish critical issues from optional improvements.
 - After completing a meaningful change, use the [prepare-commits skill](.agents/skills/prepare-commits/SKILL.md) to propose one or more logically grouped commits.
 - Commit messages explain the purpose of the changes. When an actual task or GitHub Issue identifier is available, put it first. Until task tracking is established, omit the identifier without repeatedly asking for it; never invent one.
 - Staging task-related paths or hunks with `git add` needs no separate user confirmation. Inspect the staged diff and preserve unrelated user changes and staged content.
-- Present the logical commit plan, included files or hunks, and checks for context. Request approval of the exact commit message or explicitly listed batch of messages before creating commits. Do not ask for separate staging or file-list approval. Approval to implement changes is not approval of a commit message; unrelated content and material task-scope changes are not covered by message approval.
+- Present the logical commit plan, exact messages, included files or hunks, and checks for context without asking a separate question about message approval.
+- Use a single confirmation at commit execution: request approval through the tool's command approval prompt for the exact `git commit` invocation, including its message. This execution approval replaces the separate chat approval of the message. Do not ask another chat confirmation before or after it, and do not request a reusable allow rule for `git commit`.
+- Approval to implement changes is not approval to execute a commit. Commit execution approval covers only the stated message and task content; material changes require a new execution approval. History rewriting and protected-branch exceptions still require their applicable explicit authorization.
 
 ## Progress Tracking
 
