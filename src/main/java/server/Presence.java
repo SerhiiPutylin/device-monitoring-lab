@@ -1,15 +1,20 @@
 package server;
 
 import enums.ServerState;
-import java.time.LocalDateTime;
+import java.util.function.LongSupplier;
 
 public class Presence {
-  private static final int WAITING_LIMIT = 5;
+  private static final long WAITING_LIMIT_NANOS = 5_000_000;
   private ServerState state = ServerState.OFFLINE;
-  private LocalDateTime lastSeen;
+  private long lastSeen;
+  private final LongSupplier timeSupplier;
+
+  public Presence(LongSupplier timeSupplier) {
+    this.timeSupplier = timeSupplier;
+  }
 
   public void markSeen() {
-    lastSeen = LocalDateTime.now();
+    lastSeen = timeSupplier.getAsLong();
     state = ServerState.ONLINE;
   }
 
@@ -21,6 +26,6 @@ public class Presence {
   }
 
   private boolean hasReachedLimit() {
-    return lastSeen.isBefore(LocalDateTime.now().minusSeconds(WAITING_LIMIT));
+    return timeSupplier.getAsLong() - lastSeen >= WAITING_LIMIT_NANOS;
   }
 }
