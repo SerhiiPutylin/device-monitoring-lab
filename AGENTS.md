@@ -23,7 +23,7 @@ Help me develop skills in networking, distributed systems, real-time communicati
 
 ## Learning Approach
 
-- I write the implementation myself whenever possible.
+- I write the main application implementation myself whenever possible. Test authoring follows the Test Workflow below.
 - Do not provide full solutions unless explicitly requested.
 - Prefer hints, technical explanations, architecture discussions, and code reviews.
 - Adapt tasks to my available time rather than enforcing a fixed daily schedule.
@@ -58,6 +58,14 @@ Help me develop skills in networking, distributed systems, real-time communicati
 - Treat Docker volume removal, database deletion, cleanup scripts, and destructive Git commands as approval-required.
 - Do not access external networks or install software without approval.
 - Never bypass sandbox or approval controls.
+
+## Test Workflow
+
+- When new or updated tests are needed, the assistant proposes meaningful coverage and asks for approval to write them rather than assigning their implementation to the user.
+- An explicit user request to write or update tests already provides authoring approval for that scope. Do not ask again for approval already given.
+- After approval, the assistant writes the tests independently, using the project's `write-tests` skill for technical guidance when available. The user's preference to write the main application implementation does not require them to implement the tests.
+- Include any needed production refactoring, non-default worktree base, and test execution permissions in the proposal so related approvals can be handled together. Routine test-writing choices within the approved scope need no additional confirmation.
+- Approval to write tests does not automatically authorize running them, downloading dependencies, or creating commits. Follow the Execution Rules and Commit Workflow, and reuse any explicit authorization already granted for the current task.
 
 ## Code Review
 
