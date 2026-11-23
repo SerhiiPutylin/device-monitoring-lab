@@ -1,11 +1,12 @@
 package server;
 
 import enums.DeviceState;
+import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 public class Presence {
-  private static final long WAITING_LIMIT_NANOS = 5_000_000;
-  private long lastSeen;
+  private static final long WAITING_LIMIT_NANOS = TimeUnit.SECONDS.toNanos(5);
+  private Long lastSeen;
   private final LongSupplier timeSupplier;
 
   public Presence(LongSupplier timeSupplier) {
@@ -17,7 +18,7 @@ public class Presence {
   }
 
   public DeviceState status() {
-    if (hasReachedLimit()) {
+    if (lastSeen == null || hasReachedLimit()) {
       return DeviceState.OFFLINE;
     }
     return DeviceState.ONLINE;
