@@ -41,9 +41,14 @@ Task 01.1 пройшов статичне code review та локальні ру
 і `SocketTimeoutException`; interrupt під час паузи припиняє подальші спроби.
 У Task 01.4 listener продовжує приймати клієнтів після EOF, read timeout або
 protocol error попередньої сесії.
+У Task 01.5 додано окремий компонент `Presence`: він обчислює `DeviceState`
+за часом останнього `markSeen()`, використовуючи передане джерело часу в
+наносекундах. Початковий стан — `OFFLINE`; через 5 секунд без оновлення
+пристрій також стає `OFFLINE`.
 Автоматизовані unit та loopback integration tests пройшли на JDK 21:
-36 test cases, без failures, errors або skipped tests. Heartbeat і визначення
-offline-стану залишаються наступними етапами навчального сценарію.
+50 test cases, без failures, errors або skipped tests. `Presence` поки не
+підключено до `TcpServer`: оновлення активності за telemetry та спостереження
+переходів у `OFFLINE` залишаються наступним кроком Task 01.5.
 
 ## Підготовка до запуску
 
@@ -129,15 +134,20 @@ device_01,0,23.5
 mvn test
 ```
 
-Лише unit tests для framing та client retries:
+Лише unit tests для framing, client retries та presence:
 
 ```sh
-mvn -Dtest=NewlineMessageReaderTest,DeviceSimulatorTest test
+mvn -Dtest=NewlineMessageReaderTest,DeviceSimulatorTest,PresenceTest test
 ```
 
 `NewlineMessageReaderTest` перевіряє повідомлення та EOF, межу `256/257`,
 кілька повідомлень у потоці, підрахунок Java `char` та поширення read errors.
 Oversized input перевіряється reader, який не дозволяє дочекатися EOF.
+
+`PresenceTest` використовує керований час без реального очікування. Покрито
+початковий `OFFLINE`, нульовий і від'ємний початок відліку, межу
+`4 999 / 5 000 ms`, продовження активності новим повідомленням, повернення
+в `ONLINE` після timeout та відсутність оновлення активності від `status()`.
 
 `TcpServerIntegrationTest` використовує реальні sockets лише на loopback,
 динамічні порти (`port 0`) та короткі read timeouts. Покрито 10 повідомлень
