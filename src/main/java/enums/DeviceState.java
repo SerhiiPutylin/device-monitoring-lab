@@ -1,6 +1,6 @@
 package enums;
 
-public enum ServerState {
+public enum DeviceState {
   ONLINE,
   OFFLINE
 }
